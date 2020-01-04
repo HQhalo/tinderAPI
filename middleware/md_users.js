@@ -17,7 +17,7 @@ module.exports = {
         });
       }
       if(!req.body.nameuser){
-          return res.status(400).sed({
+          return res.status(400).send({
             msg : 'please provide name user'
           });
       }

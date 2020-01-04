@@ -17,12 +17,12 @@ router.post('/sign-up', userMiddleware.validateRegister, (req, res, next) => {
         `SELECT * FROM users WHERE LOWER(id) = LOWER(${db.escape( req.body.id)});`,
         (err, result) => {
             if (result.length) {
-                return res.status(409).send({msg: 'This username is already in use!'});
+                return res.send({error: true,msg: 'This username is already in use!'});
             } else {
             // username is available
             bcrypt.hash(req.body.pass, 10, (err, hash) => {
                 if (err) {
-                    return res.status(500).send({msg: err});
+                    return res.send({error:true,msg: err});
             } else {
                 // has hashed pw => add to database
                 db.query(
@@ -30,9 +30,9 @@ router.post('/sign-up', userMiddleware.validateRegister, (req, res, next) => {
                     req.body.id)}, ${db.escape(hash)},${db.escape(req.body.nameuser)} ,now())`,
                 (err, result) => {
                     if (err) {
-                        return res.status(400).send({msg: err.code});
+                        return res.send({error: true,msg: err.code});
                     }
-                    return res.status(201).send({msg: 'Registered!'});
+                    return res.send({error:false,msg: 'Registered!'});
                 }
                 );
             }
@@ -49,10 +49,10 @@ router.post('/login', (req, res, next) => {
         (err, result) => {
           // user does not exists
           if (err) {
-            return res.status(400).send({msg: err.code});
+            return res.send({error:true,msg: err.code});
           }
           if (!result.length) {
-            return res.status(401).send({msg: 'Username or password is incorrect!'});
+            return res.send({error:true,msg: 'Username or password is incorrect!'});
           }
           // check password
           bcrypt.compare(
@@ -61,7 +61,7 @@ router.post('/login', (req, res, next) => {
             (bErr, bResult) => {
               // wrong password
               if (bErr) {
-                return res.status(401).send({msg: 'Username or password is incorrect!'});
+                return res.send({error:true,msg: 'Username or password is incorrect!'});
               }
               if (bResult) {
                 const token = jwt.sign({
@@ -74,13 +74,13 @@ router.post('/login', (req, res, next) => {
                 db.query(
                   `UPDATE users SET last_login = now() WHERE id = '${result[0].id}'`
                 );
-                return res.status(200).send({
+                return res.send({error:false,
                   msg: 'Logged in!',
                   token,
                   user: result[0]
                 });
               }
-              return res.status(401).send({
+              return res.send({error:true,
                 msg: 'Username or password is incorrect!'
               });
             }
@@ -95,10 +95,10 @@ router.post('/update-infor',userMiddleware.isLoggedIn, (req, res, next) => {
     (err, result) => {
       // user does not exists
       if (err) {
-        return res.status(400).send({msg: 'something wrong!'});
+        return res.send({error:true,msg: 'something wrong!'});
       }
       if (!result.length) {
-        return res.status(401).send({msg: 'update!'});
+        return res.send({error:false,msg: 'update!'});
       }
     });
 });
@@ -111,9 +111,9 @@ router.get('/list-users',userMiddleware.isLoggedIn, (req, res, next) => {
     (err, result) => {
       // user does not exists
       if (err) {
-        return res.status(400).send({msg: err.code});
+        return res.send({error:true,msg: err.code});
       }
-      res.status(200).send({
+      res.send({error: false,
         msg: 'get list successfully',
         userlist:result
       })
@@ -125,7 +125,7 @@ router.post('/upload-avatar', userMiddleware.isLoggedIn,async (req, res) => {
 
   try {
       if(!req.files) {
-          return res.status(400).send('No file uploaded');
+          return res.send('error:true,No file uploaded');
       } else {
           //Use the name of the input field (i.e. "avatar") to retrieve the uploaded file
           let avatar = req.files.avatar;
@@ -138,7 +138,7 @@ router.post('/upload-avatar', userMiddleware.isLoggedIn,async (req, res) => {
             `UPDATE users SET avatar = '${filename}' WHERE id = '${req.userData.id}'`
           );
           //send response
-          res.status(200).send({
+          res.send({error:false,
               message: 'File is uploaded',
               data: {
                   name: filename,
@@ -148,7 +148,7 @@ router.post('/upload-avatar', userMiddleware.isLoggedIn,async (req, res) => {
           });
       }
   } catch (err) {
-      res.status(500).send(err);
+      res.send({error:true,msg: 'something wrong!'});
   }
 });
 router.get('/download-avatar', userMiddleware.isLoggedIn,(req, res, next) => {
@@ -159,13 +159,65 @@ router.get('/download-avatar', userMiddleware.isLoggedIn,(req, res, next) => {
     (err, result) => {
       // user does not exists
       if (err) {
-        return res.status(400).send({msg: err.code});
+        return res.send({error:true,msg: err.code});
       }
-      if(result){
+      
+      if(result[0].avatar){
         console.log(result[0].avatar)
         res.sendFile(path.join(__dirname, '../uploads/',result[0].avatar));
       }
-      
+      else {
+        res.send({error:true,msg: null});
+      }
     });
+});
+router.post('/like',userMiddleware.isLoggedIn,(req,res,next)=>{
+  console.log('like');
+  var idLikedUser = req.body.id;
+  console.log(idLikedUser)
+  console.log(req.userData.id)
+  db.query(
+    `SELECT * FROM users WHERE LOWER(id) = LOWER(${db.escape( req.body.id)});`,
+    (err, result) => {
+      
+        if (!result.length) {
+            return res.send({error: true,msg: 'This username is not exist!'});
+        } else {
+          db.query(
+            `INSERT INTO likes (user_id, liked_user,datelike) VALUES (${db.escape( req.userData.id)},${db.escape(
+            req.body.id)} ,now())`,
+            (err, result) => {
+              if (err) {
+                  return res.send({error: true,msg: err.code});
+              }
+              return res.send({error:false,msg: 'liked!'});
+          });
+        }
+  });
+});
+
+router.post('/superlike',userMiddleware.isLoggedIn,(req,res,next)=>{
+  console.log('like');
+  var idLikedUser = req.body.id;
+  console.log(idLikedUser)
+  console.log(req.userData.id)
+  db.query(
+    `SELECT * FROM users WHERE LOWER(id) = LOWER(${db.escape( req.body.id)});`,
+    (err, result) => {
+      
+        if (!result.length) {
+            return res.send({error: true,msg: 'This username is not exist!'});
+        } else {
+          db.query(
+            `INSERT INTO superlikes (user_id, superliked_user,datelike) VALUES (${db.escape( req.userData.id)},${db.escape(
+            req.body.id)} ,now())`,
+            (err, result) => {
+              if (err) {
+                  return res.send({error: true,msg: err.code});
+              }
+              return res.send({error:false,msg: 'liked!'});
+          });
+        }
+  });
 });
 module.exports = router;
