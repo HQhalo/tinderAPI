@@ -15,6 +15,7 @@ app.use(fileUpload({
     createParentPath: true
 }));
 app.use(cors());
+
 // add routes
 const router = require('./routes/router_users');
 app.use('/users', router);

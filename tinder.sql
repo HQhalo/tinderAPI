@@ -1,26 +1,23 @@
-create database tinder;
-use tinder;
-
 create table users (
 	id char(255) not null,
     pass char(255) not null,
-    nameuser nvarchar(255) not null,
+    nameuser varchar(255) not null,
     registered datetime,
     last_login datetime,
     brithday date,
     phone varchar(11),
     email varchar(255),
-    gender nvarchar(6),
+    gender varchar(6),
     facebookID varchar(60),
     infor text,
     job text,
-    gendertomatch nvarchar(6),
+    gendertomatch varchar(6),
+    avatar varchar(255),
     location text,
     primary key (id)
+   
 );
-alter table users
-	add constraint C_GENDER
-    check (gender in ('male','female'));
+
     
 create table likes (
 	user_id char(16),
@@ -39,7 +36,8 @@ alter table likes
 create table superlikes (
 	user_id char(16),
     superliked_user char(16),
-    datelike datetime
+    datelike datetime,
+    primary key(user_id , superliked_user)
 );
 
 alter table superlikes 
@@ -64,3 +62,14 @@ alter table matchs
     foreign key(user2)
     references users(id)
     
+
+create table likes(
+	fromUsr varchar(255) not null,
+    toUsr varchar(255) not null
+);
+create table messages(
+	fromUsr varchar(255) not null,
+    toUsr   varchar(255) not null,
+    msg     text not null,
+    sendTime datetime
+);
